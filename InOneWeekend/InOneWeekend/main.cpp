@@ -1,3 +1,6 @@
+#include "color.h"
+#include "vec3.h"
+
 #include <iostream>
 
 int main()
@@ -22,17 +25,9 @@ int main()
 		for (int i = 0; i < image_width; ++i)
 		{
 			// 관례적으로, r, g, b 값은 0 ~ 1 사이의 범위의 실수형으로 맵핑해서 계산해놓음.
-			auto r = double(i) / (image_width - 1);
-			auto g = double(j) / (image_height - 1);
-			auto b = 0;
-
-			// 그러나, .ppm 에 출력할 때에는 .ppm 의 rows와 columns 에 해당하는
-			// 0 ~ 256 범위 내의 정수형으로 형변환하여 출력함.
-			int ir = static_cast<int>(255.999 * r);
-			int ig = static_cast<int>(255.999 * g);
-			int ib = static_cast<int>(255.999 * b);
-
-			std::cout << ir << ' ' << ig << ' ' << ib << '\n';
+			// r, g, b 값을 color 객체(vec3 클래스 별칭)로 만들어 둠.
+			auto pixel_color = color(double(i) / (image_width - 1), double(j) / (image_height - 1), 0);
+			write_color(std::cout, pixel_color); // color 객체에 정의된 색상값을 스트림 출력하는 유틸 함수 호출
 		}
 	}
 

@@ -7,7 +7,13 @@
 // 주어진 반직선(ray)에 대한 특정 색상을 반환하는 함수
 color ray_color(const ray& r)
 {
-	return color(0, 0, 0);
+	// 반직선을 길이가 1인 단위벡터로 정규화한 뒤,
+	// 정규화된 단위벡터의 y값에 따라 색상을 혼합하여 수직방향 그라디언트를 적용해 봄.
+	vec3 unit_direction = unit_vector(r.direction()); // vec3.h 에 정의된 벡터 정규화 유틸 함수 사용
+	auto a = 0.5 * (unit_direction.y() + 1.0); // -1 ~ 1 사이의 정규화된 단위벡터 y 값 범위를 0 ~ 1 사이로 맵핑함.
+	
+	// linear interpolation(선형보간)으로 흰색과 파란색을 0 ~ 1 사이로 맵핑된 a값에 따라 혼합하여 최종 색상 반환
+	return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
 }
 
 int main()
@@ -73,7 +79,7 @@ int main()
 	// 뷰포트 왼쪽 끝에서 오른쪽 끝으로 향하는 수평 방향 벡터(viewport_u) 와
 	// 뷰포트 위쪽 끝에서 아래쪽 끝으로 향하는 수직 방향 벡터(viewport_v) 정의
 	auto viewport_u = vec3(viewport_width, 0, 0);
-	auto viewport_v = vec3(viewport_height, 0, 0);
+	auto viewport_v = vec3(0, -viewport_height, 0);
 
 	// pixel grid 의 각 픽셀 사이의 수평 방향 간격을 나타내는 벡터(pixel_delta_u)와
 	// pixel grid 의 각 픽셀 사이의 수직 방향 간격을 나타내는 벡터(pixel_delta_v) 정의

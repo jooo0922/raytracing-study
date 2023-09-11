@@ -1,7 +1,14 @@
 #include "color.h"
+#include "ray.h"
 #include "vec3.h"
 
 #include <iostream>
+
+// 주어진 반직선(ray)에 대한 특정 색상을 반환하는 함수
+color ray_color(const ray& r)
+{
+	return color(0, 0, 0);
+}
 
 int main()
 {
@@ -32,6 +39,10 @@ int main()
 	int image_height = static_cast<int>(image_width / aspect_ratio); // 이미지 높이는 정수형이므로, 너비와 종횡비를 곱한 실수값을 정수형으로 형변환함.
 	image_height = (image_height < 1) ? 1 : image_height; // 이미지 너비는 항상 1보다는 크도록 함.
 
+
+	// Camera
+
+	auto focal_length = 1.0; // 카메라 중점(eye point)과 viewport 사이의 거리 (현재는 단위 거리 1로 지정함.)
 	// 실제로 계산된 색상을 저장하는 이미지 외에도, 3D Scene 에 존재하는 가상의 viewport 사이즈도 정의해야 함.
 	/*
 		viewport
@@ -52,6 +63,33 @@ int main()
 	*/
 	auto viewport_height = 2.0; // 이번엔 뷰포트 높이 먼저 정의
 	auto viewport_width = viewport_height * (static_cast<double>(image_width) / image_height); // aspect_ratio 는 실제 이미지 사이즈의 종횡비와 달라, 실제 이미지 크기로부터 종횡비를 다시 계산해서 적용함.
+	auto camera_center = point3(0, 0, 0); // 3D Scene 상에서 카메라 중점(eye point) > viewport 로 casting 되는 모든 ray 의 출발점이기도 함.
+
+	/*
+		여기서부터 계산되는 변수들은
+		https://raytracing.github.io/books/RayTracingInOneWeekend.html > Figure 4 에 정리된
+		viewport 구조에 존재하는 벡터와 정점들을 선언 및 초기화한 것임.
+	*/
+	// 뷰포트 왼쪽 끝에서 오른쪽 끝으로 향하는 수평 방향 벡터(viewport_u) 와
+	// 뷰포트 위쪽 끝에서 아래쪽 끝으로 향하는 수직 방향 벡터(viewport_v) 정의
+	auto viewport_u = vec3(viewport_width, 0, 0);
+	auto viewport_v = vec3(viewport_height, 0, 0);
+
+	// pixel grid 의 각 픽셀 사이의 수평 방향 간격을 나타내는 벡터(pixel_delta_u)와
+	// pixel grid 의 각 픽셀 사이의 수직 방향 간격을 나타내는 벡터(pixel_delta_v) 정의
+	auto pixel_delta_u = viewport_u / image_width;
+	auto pixel_delta_v = viewport_v / image_height;
+
+	// 뷰포트의 좌상단 꼭지점의 '3D 공간 상의' 좌표 계산 (이미지 좌표 아님 주의!!) (Figure 4 에서 Q 로 표시)
+	// 카메라 원점에서 focal_length 만큼 음의 z축으로 이동 후, 뷰포트 수평 길이의 절반만큼 왼쪽으로,
+	// 뷰포트 수직 길이의 절반만큼 위쪽으로 이동
+	auto viewport_upper_left = camera_center
+							- vec3(0, 0, focal_length) - viewport_u / 2 - viewport_v / 2;
+
+	// 'pixel grid'의 좌상단 픽셀(이미지 좌표 상으로 (0,0)에 해당하는 픽셀)의 '3D 공간 상의' 좌표 계산 (Figure 4 에서 P0,0 으로 표시)
+	// '뷰포트 좌상단 꼭지점'에서 픽셀 간격의 절반씩만큼 오른쪽, 아래쪽으로 이동
+	auto pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
 
 	// Render
 
@@ -66,9 +104,16 @@ int main()
 		std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
 		for (int i = 0; i < image_width; ++i)
 		{
-			// 관례적으로, r, g, b 값은 0 ~ 1 사이의 범위의 실수형으로 맵핑해서 계산해놓음.
-			// r, g, b 값을 color 객체(vec3 클래스 별칭)로 만들어 둠.
-			auto pixel_color = color(double(i) / (image_width - 1), double(j) / (image_height - 1), 0);
+			// 뷰포트 각 픽셀 중점의 '3D 공간 상의' 좌표 계산
+			auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
+			
+			// 카메라 중점 ~ 뷰포트 각 픽셀 중점까지 향하는 방향벡터 계산
+			auto ray_direction = pixel_center - camera_center;
+
+			// 카메라 ~ 뷰포트 각 픽셀 중점까지 향하는 반직선(ray) 타입 변수 r 선언 및 초기화
+			ray r(camera_center, ray_direction);
+
+			auto pixel_color = ray_color(r); // 주어진 반직선(ray) r 을 입력받아 특정 색상을 반환받아 픽셀 색상 계산
 			write_color(std::cout, pixel_color); // color 객체에 정의된 색상값을 스트림 출력하는 유틸 함수 호출
 		}
 	}

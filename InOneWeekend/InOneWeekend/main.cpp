@@ -4,9 +4,58 @@
 
 #include <iostream>
 
+// 주어진 구체에 대하여 주어진 반직선이 교차하는지 확인하는 함수
+/*
+	참고로, 여기서 구체의 중점인 center 와 반직선 r 매개변수는 '참조변수'로 선언됨.
+	
+	참조변수는 함수에 전달하는 외부변수에 대한 별명으로써, 
+	해당 외부변수와 동일한 메모리 공간을 가리킴! -> 직접적인 접근 및 수정 가능!
+
+	참조변수는 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter6_14/Chapter6_14.cpp 참고!
+*/
+bool hit_sphere(const point3& center, double radius, const ray& r)
+{
+	// 반직선-구체 교차 여부를 검증하는 판별식 구현 
+	/*
+		근의 공식과 판별식
+
+		일단 근의 공식은 x 에 대한 이차방정식에서 x 의 해를 구하는 공식이였지?
+		중학교 수학이니 기억할 것임!
+
+		근의 공식에서 b^2-4ac 에 해당하는 부분을 '판별식' 이라고 함!
+		이 판별식이 0보다 작으면, 이차방정식의 해가 없고,
+		0보다 크면 이차방정식의 해가 2개이고,
+		0이면 이차방정식의 해가 1개임을 응용해서,
+
+		t에 대한 이차방정식의 해가 몇 개인지에 따라
+		반직선이 구체와 교차하는 점이 아예 없는지, 1개인 지, 2개인 지 확인하는 것임.  
+
+		어쩌다가 갑자기 t에 대한 이차방정식이 튀어나왔냐면,
+
+		https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection 페이지에서
+		반직선 상의 특정 점을 구할 때의 비율값 t (ray.h > at(double t) 메서드의 매개변수)
+		에 대한 이차방정식을 유도했었음!
+
+		참고로, t 에 대한 이차방정식을 유도하는 과정에서,
+		내적의 분배법칙 원리를 활용해서 공식을 유도해나갔는데,
+		이에 관해서는 게임수학 p.237 에 정리되어 있음!
+	*/
+	vec3 oc = r.origin() - center; // 반직선 출발점 ~ 구체의 중점까지의 벡터 (본문 공식에서 (A-C) 에 해당)
+	auto a = dot(r.direction(), r.direction()); // 반직선 방향벡터 자신과의 내적 (본문 공식에서 b⋅b 에 해당)
+	auto b = 2.0 * dot(oc, r.direction()); // 2 * 반직선 방향벡터와 (A-C) 벡터와의 내적 (본문 공식에서 2tb⋅(A−C) 에 해당)
+	auto c = dot(oc, oc) - radius * radius; // (A-C) 벡터 자신과의 내적 - 반직선 제곱 (본문 공식에서 (A−C)⋅(A−C)−r^2 에 해당)
+	auto discriminant = b * b - 4 * a * c; // 근의 공식 판별식 계산 (b^2-4ac 에 해당. discriminant 는 근의 공식의 판별식을 뜻하는 영단어)
+	return (discriminant >= 0); // 근의 공식 판별식이 0 이상이면 해가 존재하므로 true 를, 해가 존재하지 않으면 false 를 반환 > 반직선-구체 교차 여부와 일치!
+}
+
 // 주어진 반직선(ray)에 대한 특정 색상을 반환하는 함수
 color ray_color(const ray& r)
 {
+	// 중점이 (0, 0, -1) 이고, 반지름이 0.5 인 구체와 교차하는 반직선에 대해서는
+	// 빨강색을 최종 색상으로 반환하고 함수를 종료함.
+	if (hit_sphere(point3(0, 0, -1), 0.5, r))
+		return color(1, 0, 0);
+
 	// 반직선을 길이가 1인 단위벡터로 정규화한 뒤,
 	// 정규화된 단위벡터의 y값에 따라 색상을 혼합하여 수직방향 그라디언트를 적용해 봄.
 	vec3 unit_direction = unit_vector(r.direction()); // vec3.h 에 정의된 벡터 정규화 유틸 함수 사용

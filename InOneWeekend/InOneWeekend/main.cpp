@@ -15,7 +15,7 @@
 */
 double hit_sphere(const point3& center, double radius, const ray& r)
 {
-	// 반직선-구체 교차 여부를 검증하는 판별식 구현 
+	// 반직선-구체 교차 여부를 검증하는 판별식 구현 (하단 '근의 공식과 판별식 관련 필기 참고')
 	/*
 		근의 공식과 판별식
 
@@ -40,11 +40,22 @@ double hit_sphere(const point3& center, double radius, const ray& r)
 		내적의 분배법칙 원리를 활용해서 공식을 유도해나갔는데,
 		이에 관해서는 게임수학 p.237 에 정리되어 있음!
 	*/
+	/*
+		hit_sphere() 의
+		반직선-구체 교차 여부를 검증하는 판별식 리팩터링
+
+		아래 두 가지 원칙에 의거하여 판별식을 리팩터링함.
+
+		1. 벡터 내적 연산은 벡터 길이의 제곱 연산으로 변경해 줌.
+		2. 근의 공식에서 b 에 해당하는 값을 2.0 * dot(oc, r.direction()) 로 계산하고 있는데,
+		여기서 h = dot(oc, r.direction()) 로 삼아서 근의 공식의 b 를 2h 로 치환함 -> 근의 공식을 간소화함!
+		이때, 코드 상으로 구현할 때, h 는 half_b 라는 변수로 계산한다!
+	*/
 	vec3 oc = r.origin() - center; // 반직선 출발점 ~ 구체의 중점까지의 벡터 (본문 공식에서 (A-C) 에 해당)
-	auto a = dot(r.direction(), r.direction()); // 반직선 방향벡터 자신과의 내적 (본문 공식에서 b⋅b 에 해당)
-	auto b = 2.0 * dot(oc, r.direction()); // 2 * 반직선 방향벡터와 (A-C) 벡터와의 내적 (본문 공식에서 2tb⋅(A−C) 에 해당)
-	auto c = dot(oc, oc) - radius * radius; // (A-C) 벡터 자신과의 내적 - 반직선 제곱 (본문 공식에서 (A−C)⋅(A−C)−r^2 에 해당)
-	auto discriminant = b * b - 4 * a * c; // 근의 공식 판별식 계산 (b^2-4ac 에 해당. discriminant 는 근의 공식의 판별식을 뜻하는 영단어)
+	auto a = r.direction().length_squared(); // 반직선 방향벡터 자신과의 내적 (본문 공식에서 b⋅b 에 해당) > 벡터 자신과의 내적을 벡터 길이 제곱으로 리팩터링
+	auto half_b = dot(oc, r.direction()); // 2 * 반직선 방향벡터와 (A-C) 벡터와의 내적 (본문 공식에서 2tb⋅(A−C) 에 해당) > half_b 로 변경
+	auto c = oc.length_squared() - radius * radius; // (A-C) 벡터 자신과의 내적 - 반직선 제곱 (본문 공식에서 (A−C)⋅(A−C)−r^2 에 해당) > 벡터 자신과의 내적을 벡터 길이 제곱으로 리팩터링
+	auto discriminant = half_b * half_b - a * c; // 근의 공식 판별식 계산 (b^2-4ac 에 해당. discriminant 는 근의 공식의 판별식을 뜻하는 영단어) > b = 2h 로 치환해서 근의 공식 간소화
 	
 	// 판별식의 결과(해의 존재 여부)만 반환할 것이 아니라,
 	// t에 대한 이차방정식의 해, 즉, 구체와 반직선의 교차점의 반직선 상의 비율값 t 값을 직접 계산해서 반환함.
@@ -76,7 +87,7 @@ double hit_sphere(const point3& center, double radius, const ray& r)
 			즉, 지금 단계에서는 카메라와 더 가까운 교차점을 구할 수 있는 비율값 t 만 계산해서
 			반환하겠다는 뜻!
 		*/
-		return (-b - sqrt(discriminant)) / (2.0 * a);
+		return (-half_b - sqrt(discriminant)) / a; // 리팩터링으로 간소화된 근의 공식 사용
 	}
 }
 
